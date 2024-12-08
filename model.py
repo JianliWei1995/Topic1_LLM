@@ -263,18 +263,18 @@ def build_transformer(src_vocab_size: int, tgt_vocab_size: int, src_seq_len: int
     return transformer
 
 
-model = build_transformer(src_vocab_size=5000, tgt_vocab_size=5000, src_seq_len=128, tgt_seq_len=128)
-src = torch.ones(4, 128).long()
-tgt = torch.ones(4, 128).long()
+# model = build_transformer(src_vocab_size=5000, tgt_vocab_size=5000, src_seq_len=128, tgt_seq_len=128)
+# src = torch.ones(4, 128).long()
+# tgt = torch.ones(4, 128).long()
 
-src_mask = torch.ones(128)
-tgt_mask = torch.ones(128)
+# src_mask = torch.ones(128)
+# tgt_mask = torch.ones(128)
 
-encode_out = model.encode(src, src_mask)
-print('Encoder output shape:', encode_out.shape)
+# encode_out = model.encode(src, src_mask)
+# print('Encoder output shape:', encode_out.shape)
 
-decode_out = model.decode(encode_out, src_mask, tgt, tgt_mask)
-print('Decoder output shape:', decode_out.shape)
+# decode_out = model.decode(encode_out, src_mask, tgt, tgt_mask)
+# print('Decoder output shape:', decode_out.shape)
 
-output = model.project(decode_out)
-print('Projection layer output shape:', output.shape)
+# output = model.project(decode_out)
+# print('Projection layer output shape:', output.shape)
