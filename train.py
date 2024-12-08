@@ -19,6 +19,43 @@ from tqdm import tqdm
 
 from pathlib import Path
 
+def greedy_encode(model, source, source_mask, tokenizer_src, tokenizer_tgt, max_len, device):
+    sos_idx = tokenizer_tgt.token_to_id('[SOS]')
+    eos_idx = tokenizer_tgt.token_to_id('[EOS]')
+
+    # precompute the encoder output and resue it for every token we get from the decoder
+    encoder_output = model.encode(source, source_mask)
+    # initialize the decoder input with sos token
+    decoder_input = torch.empty(1,1).fill(sos_idx).type_as(source).to(device)
+    while True:
+        if decoder.size(1) == max_len:
+            break
+
+        # Build mask for the target (decoder input)
+        decoder_mask = causal_mask
+
+
+def run_validation(model, validation_ds, tokenizer_src, tokenizer_tgt, max_len, device, print_msg, global_state, writer, num_examples=2):
+    model.eval()
+    count = 0
+
+    source_texts = []
+    expected = []
+    predicted = []
+
+    # Size of the control window (just use a default value)
+    console_width = 80
+    with torch.no_grad():
+        for batch in validation_ds:
+            count += 1
+            encoder_input = batch['encoder_input'].to(device)
+            encoder_mask = batch['encoder_mask'].to(device)
+
+            assert encoder_input.size(0) == 1, 'Batch size must be 1 for validation'
+
+
+
+
 def get_all_sentences(ds, lang):
     for item in ds:
         yield item['translation'][lang]
