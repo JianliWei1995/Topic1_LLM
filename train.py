@@ -35,7 +35,6 @@ def greedy_decode(model, source, source_mask, tokenizer_src, tokenizer_tgt, max_
         decoder_mask = causal_mask(decoder_input.size(1)).type_as(source_mask).to(device)
 
         # Calculate the output of the encoder
-        print(encoder_output.shape, source_mask.shape, decoder_input.shape, decoder_mask.shape)
         out = model.decode(encoder_output, source_mask, decoder_input, decoder_mask)
 
         # Get the next token
@@ -179,7 +178,6 @@ def train_model(config):
 
             # Run the tensors through the transformer
             encoder_output = model.encode(encoder_input, encoder_mask) # (B, Seq_Len, d_model)
-            print(encoder_output.shape, encoder_mask.shape, decoder_input.shape, decoder_mask.shape)
             decoder_output = model.decode(encoder_output, encoder_mask, decoder_input, decoder_mask) # (B, Seq_Len, d_model)
             proj_output  = model.project(decoder_output) # (B, Seq_Len, tgt_vocab_size)
 
