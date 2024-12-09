@@ -19,29 +19,44 @@ from tqdm import tqdm
 
 from pathlib import Path
 
-def greedy_encode(model, source, source_mask, tokenizer_src, tokenizer_tgt, max_len, device):
+def greedy_decode(model, source, source_mask, tokenizer_src, tokenizer_tgt, max_len, device):
     sos_idx = tokenizer_tgt.token_to_id('[SOS]')
     eos_idx = tokenizer_tgt.token_to_id('[EOS]')
 
     # precompute the encoder output and resue it for every token we get from the decoder
     encoder_output = model.encode(source, source_mask)
     # initialize the decoder input with sos token
-    decoder_input = torch.empty(1,1).fill(sos_idx).type_as(source).to(device)
+    decoder_input = torch.empty(1,1).fill_(sos_idx).type_as(source).to(device)
     while True:
-        if decoder.size(1) == max_len:
+        if decoder_input.size(1) == max_len:
             break
 
         # Build mask for the target (decoder input)
-        decoder_mask = causal_mask
+        decoder_mask = causal_mask(decoder_input.size(1)).type_as(source_mask).to(device)
+
+        # Calculate the output of the encoder
+        print(encoder_output.shape, source_mask.shape, decoder_input.shape, decoder_mask.shape)
+        out = model.decode(encoder_output, source_mask, decoder_input, decoder_mask)
+
+        # Get the next token
+        prob = model.project(out[:,-1])
+        # Select the token with the max probability (because it is a greedy serach)
+        _, next_word = torch.max(prob, dim=1)
+        decoder_input = torch.cat([decoder_input, torch.empty(1,1).fill_(next_word.item()).type_as(source).to(device)], dim=-1)
+
+        if next_word == eos_idx:
+            break
+
+    return decoder_input.squeeze()
 
 
 def run_validation(model, validation_ds, tokenizer_src, tokenizer_tgt, max_len, device, print_msg, global_state, writer, num_examples=2):
     model.eval()
     count = 0
 
-    source_texts = []
-    expected = []
-    predicted = []
+    # source_texts = []
+    # expected = []
+    # predicted = []
 
     # Size of the control window (just use a default value)
     console_width = 80
@@ -53,7 +68,26 @@ def run_validation(model, validation_ds, tokenizer_src, tokenizer_tgt, max_len, 
 
             assert encoder_input.size(0) == 1, 'Batch size must be 1 for validation'
 
+            model_out = greedy_decode(model, encoder_input, encoder_mask, tokenizer_src, tokenizer_tgt, max_len, device)
+            source_text = batch['src_text'][0]
+            target_text = batch['tgt_text'][0]
+            model_out_text = tokenizer_tgt.decode(model_out.detach().cpu().numpy())
 
+            # source_texts.append(source_text)
+            # expected.append(target_text)
+            # predicted.append(model_out_text)
+
+            # Print to the console
+            print_msg('-'*console_width)
+            print_msg(f'SOURCE: {source_text}')
+            print_msg(f'TARGET: {target_text}')
+            print_msg(f'PREDICTED: {model_out_text}')
+
+            if count == num_examples:
+                break
+
+    ## we can still write this to the tensorboard
+    # TorchMetrics, CharErrorRate, BLEU, WordErrorRate
 
 
 def get_all_sentences(ds, lang):
@@ -136,6 +170,7 @@ def train_model(config):
         model.train()
         batch_iterator = tqdm(train_dataloader, desc=f"Processing Epoch {epoch:02d}")
         for batch in batch_iterator:
+            model.train()
             encoder_input = batch['encoder_input'].to(device) # (B, Seq_Len)
             decoder_input = batch['decoder_input'].to(device) # (B, Seq_Len)
             encoder_mask = batch['encoder_mask'].to(device) # (B, 1, 1, Seq_len)
@@ -144,6 +179,7 @@ def train_model(config):
 
             # Run the tensors through the transformer
             encoder_output = model.encode(encoder_input, encoder_mask) # (B, Seq_Len, d_model)
+            print(encoder_output.shape, encoder_mask.shape, decoder_input.shape, decoder_mask.shape)
             decoder_output = model.decode(encoder_output, encoder_mask, decoder_input, decoder_mask) # (B, Seq_Len, d_model)
             proj_output  = model.project(decoder_output) # (B, Seq_Len, tgt_vocab_size)
 
@@ -161,6 +197,8 @@ def train_model(config):
             # update the weights
             optimizer.step()
             optimizer.zero_grad()
+
+            run_validation(model, val_dataloader, tokenizer_src, tokenizer_tgt, config['seq_len'], device, lambda msg: batch_iterator.write(msg), global_step, Writer)
 
             global_step += 1
 
