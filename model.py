@@ -192,7 +192,7 @@ class ProjectionLayer(nn.Module):
 
     def forward(self, x):
         # (batch, seq_len, d_model) --> (batch, seq_len, vocab_size)
-        return self.proj(x)
+        return torch.log_softmax(self.proj(x))
 
 class Transformer(nn.Module):
 
