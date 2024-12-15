@@ -79,9 +79,9 @@ class IMDBBertDataset(Dataset):
         attention_mask = (inp == self.vocab[self.PAD]).unsqueeze(0)
 
         if item[self.NSP_TARGET_COLUMN] == 0:
-            t = [1,0]
+            t = [1,0] # is NOT next
         else:
-            t = [0,1]
+            t = [0,1] # is next
 
         nsp_target = torch.Tensor(t)
 
@@ -240,8 +240,9 @@ if __name__ == '__main__':
     ds = IMDBBertDataset(
         BASE_DIR.joinpath('data/IMDB Dataset.csv'),
         ds_from=0,
-        ds_to=2,
+        ds_to=50000,
         should_include_text=True
     )
 
-    print(ds.df.iloc[21])
+    print(ds.vocab.get_stoi())
+    # print(ds.__getitem__(2))
