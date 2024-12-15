@@ -37,7 +37,6 @@ class JointEmbedding(nn.Module):
         d = (2 * d / dim)
 
         pos = pos.unsqueeze(1) / (1e4 ** d)
-        print(pos.shape)
         pos[:, ::2], pos[:, 1::2] = torch.sin(pos[:, ::2]), torch.cos(pos[:, 1::2])
 
         return pos.expand(batch_size, *pos.size())
@@ -131,4 +130,4 @@ if __name__=="__main__":
     
     model = BERT(256, 128, 128*4, 4)
     out = model(seq, seq_mask)
-    print(out[0].shape)
+    print(out[1].shape)
