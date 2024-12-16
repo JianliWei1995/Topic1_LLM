@@ -45,7 +45,7 @@ if __name__=="__main__":
         log_dir=LOG_dir,
         checkpoint_dir=CHECKPOINT_dir,
         print_progress_every=20,
-        print_accuracy_every=200,
+        print_accuracy_every=50,
         batch_size=BATCH_size,
         learning_rate=LEARNING_rate,
         epochs=EPOCHS

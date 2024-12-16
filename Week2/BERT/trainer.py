@@ -86,7 +86,7 @@ class BertTrainer:
             token, nsp = self.model(inp, mask)
 
             tm = inverse_token_mask.unsqueeze(-1).expand_as(token)
-            token = token.masked_fill_(tm, 0)
+            token = token.masked_fill(tm, 0)
 
             loss_mlm = self.mlm_criterion(token.transpose(1,2), token_target)
             loss_nsp = self.nsp_criterion(nsp, nsp_target)
