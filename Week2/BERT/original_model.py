@@ -99,12 +99,12 @@ class Encoder(nn.Module):
     
     def forward(self, input_tensor: torch.Tensor, attention_mask: torch.Tensor):
         context = self.attention(input_tensor, attention_mask)
-        res = self.norm(self.feedforward(context))
-        return res
+        out = self.norm(self.feedforward(context))
+        return out
 
 class BERT(nn.Module):
 
-    def __init__(self, vocab_size, dim_inp, dim_out, attention_heads=4) -> None:
+    def __init__(self, vocab_size, dim_inp, dim_out, attention_heads) -> None:
         super(BERT, self).__init__()
 
         self.embedding = JointEmbedding(vocab_size, dim_inp)
