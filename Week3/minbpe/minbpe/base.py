@@ -32,6 +32,26 @@ def merge(ids, pair, idx):
                 i += 1
     return newids
 
+# two helper functions
+def replace_control_characters(s: str) -> str:
+    # we don't want to print control characters
+    # which distort the output (e.g. \n or much worse)
+    # https://stackoverflow.com/questions/4324790/removing-control-characters-from-a-string-in-python/19016117#19016117
+    # http://www.unicode.org/reports/tr44/#GC_Values_Table
+    chars = []
+    for ch in s:
+        if unicodedata.category(ch)[0]!="C":
+            chars.append(ch)
+        else:
+            chars.append(f"\\u{ord(ch):04x}") # escape
+    return "".join(chars)
+
+def render_token(t: bytes) -> str:
+    # pretty print a token, escaping control characters
+    s = t.decode('utf-8', errors="replace")
+    s = replace_control_characters(s)
+    return s
+
 #  ---------------------------------------
 # the base Tokenizer class
 
@@ -42,7 +62,7 @@ class Tokenizer:
         # default: vocab size of 256 (all bytes), no merges, no spaces
         self.merges = {} # (int, int) -> int
         self.pattern = "" # str
-        self.spacial_tokens = {} # str, e.g. {'<|endoftext|>': 10257}
+        self.special_tokens = {} # str, e.g. {'<|endoftext|>': 10257}
         self.vocab = self._build_vocab() # int -> bytes
 
     def train(self, text, vocab_size, verbose=False):
@@ -62,6 +82,48 @@ class Tokenizer:
         vocab = {idx: bytes([idx]) for idx in range(256)}
         for (p0, p1), idx in self.merges.items():
             vocab[idx] = vocab[p0] + vocab[p1]
-        for special, idx in self.spacial_tokens.items():
+        for special, idx in self.special_tokens.items():
             vocab[idx] = special.encode("utf-8")
         return vocab
+    
+    def save(self, file_prefix):
+        """
+        Saves two files: file_prefix.vocab and file_prefix.model
+        This is inspired (but not equivalent to!) sentencepiece's model saving:
+        - model file is the critical one, intended for load()
+        - vocab file is just a pretty printed version for human inspection only
+        """
+        # write the model: to be used in load() later
+        model_file = file_prefix + ".model"
+        with open(model_file, 'w') as f:
+            # write the version, pattern and merges, that's all that's needed
+            f.write("minbpe v1\n")
+            f.write(f"{self.pattern}\n")
+            # write the special tokens, first the number of them, then each on
+            f.write(f"{len(self.special_tokens)}\n")
+            for special, idx in self.special_tokens.items():
+                f.write(f"{special} {idx}\n")
+            # the merges dict
+            for idx1, idx2 in self.merges:
+                f.write(f"{idx1} {idx2}\n")
+        
+        # write the vocab: for the human to look at
+        vocab_file = file_prefix + ".vocab"
+        inverted_merges = {idx: pair for pair, idx in self.merges.items()}
+        with open(vocab_file, 'w', encoding="utf-8") as f:
+            for idx, token in self.vocab.items():
+                # note: many tokens may be partial utf-8 sequences
+                # and cannot be decoded into valid strings. Here we're using
+                # errors='replace' to replace them with the replacement char �.
+                # this also means that we couldn't possibly use .vocab in load()
+                # because decoding in this way is a lossy operation!
+                s = render_token(token)
+                # find the children of this token, if any
+                for idx in inverted_merges:
+                    # if this token has children, render it nicely as a merge
+                    idx0, idx1 = inverted_merges[idx]
+                    s0 = render_token(self.vocab[idx0])
+                    s1 = render_token(self.vocab[idx1])
+                    f.write(f"[{s0}][{s1}] -> [{s}] {idx}\n")
+                else:
+                    f.write(f"[{s}] {idx}\n")

@@ -2,7 +2,7 @@ from .base import Tokenizer, get_stats, merge
 
 class BasicTokenizer(Tokenizer):
 
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
 
     def train(self, text, vocab_size, verbose=False):
@@ -15,7 +15,7 @@ class BasicTokenizer(Tokenizer):
 
         # iteratively merge the most common pairs to create new tokens
         merges = {}
-        vocab = {idx: bytes(idx) for idx in range(256)} # int -> bytes
+        vocab = {idx: bytes([idx]) for idx in range(256)} # int -> bytes
         for i in range(num_merges):
             # count up the number of times every consecutive pairs to create new tokens
             stats = get_stats(ids)
@@ -53,6 +53,4 @@ class BasicTokenizer(Tokenizer):
         # given ids (list of integers), return python string
         text_bytes = b"".join(self.vocab[idx] for idx in ids)
         text = text_bytes.decode("utf-8", errors="replace")
-        print(ids)
-        print(text)
         return text
